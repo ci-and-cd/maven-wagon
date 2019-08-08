@@ -19,6 +19,14 @@ package org.apache.maven.wagon;
  * under the License.
  */
 
+import static org.easymock.EasyMock.anyInt;
+import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.anyString;
+import static org.easymock.EasyMock.eq;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+
+import org.apache.maven.wagon.events.TransferEvent;
 import org.apache.maven.wagon.observers.ChecksumObserver;
 import org.apache.maven.wagon.resource.Resource;
 import org.codehaus.plexus.util.FileUtils;
@@ -37,6 +45,44 @@ import java.text.SimpleDateFormat;
 public abstract class StreamingWagonTestCase
     extends WagonTestCase
 {
+    protected ProgressAnswer replaceMockForGet( Wagon wagon, int expectedSize )
+    {
+        Resource resource = new Resource( this.resource );
+        mockTransferListener.transferInitiated(
+            createTransferEvent( wagon, resource, TransferEvent.TRANSFER_INITIATED, TransferEvent.REQUEST_GET,
+                destFile ) );
+        resource = new Resource( this.resource );
+        resource.setContentLength( getExpectedContentLengthOnGet( expectedSize ) );
+        resource.setLastModified( getExpectedLastModifiedOnGet( testRepository, resource ) );
+        TransferEvent te =
+            createTransferEvent( wagon, resource, TransferEvent.TRANSFER_STARTED, TransferEvent.REQUEST_GET, destFile );
+        mockTransferListener.transferStarted( te );
+        mockTransferListener.transferProgress(
+            eq( new TransferEvent( wagon, resource, TransferEvent.TRANSFER_PROGRESS, TransferEvent.REQUEST_GET ) ),
+            anyObject( byte[].class ), anyInt() );
+
+        ProgressAnswer progressAnswer = new ProgressAnswer();
+
+        if ( assertOnTransferProgress() )
+        {
+            expectLastCall().andAnswer( progressAnswer );
+        }
+        else
+        {
+            expectLastCall().andAnswer( progressAnswer );
+            expectLastCall().anyTimes();
+        }
+        mockTransferListener.debug( anyString() );
+        expectLastCall().anyTimes();
+
+        mockTransferListener.transferCompleted(
+            createTransferEvent( wagon, resource, TransferEvent.TRANSFER_COMPLETED, TransferEvent.REQUEST_GET,
+                destFile ) );
+
+        replay( mockTransferListener );
+        return progressAnswer;
+    }
+
     public void testStreamingWagon()
         throws Exception
     {

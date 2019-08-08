@@ -1042,8 +1042,8 @@ public abstract class WagonTestCase
         resource = new Resource( this.resource );
         resource.setContentLength( getExpectedContentLengthOnGet( expectedSize ) );
         resource.setLastModified( getExpectedLastModifiedOnGet( testRepository, resource ) );
-        TransferEvent te =
-            createTransferEvent( wagon, resource, TransferEvent.TRANSFER_STARTED, TransferEvent.REQUEST_GET, null );
+        TransferEvent te = createTransferEvent( wagon,
+            new Resource( this.resource ), TransferEvent.TRANSFER_STARTED, TransferEvent.REQUEST_GET, destFile );
         mockTransferListener.transferStarted( te );
         mockTransferListener.transferProgress(
             eq( new TransferEvent( wagon, resource, TransferEvent.TRANSFER_PROGRESS, TransferEvent.REQUEST_GET ) ),
